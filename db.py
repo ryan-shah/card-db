@@ -4,24 +4,30 @@ cards = []
 deck = []
 
 # connect to sqlite databse
-conn = sqlite3.connect('2024_Nov_29_17-37_backup.dlens')
+conn = sqlite3.connect('2024_Dec_01_13-12_backup.dlens')
 
 # create a cursor object
 cursor = conn.cursor()
 
 # execute a query
 q = """
-select name
-from cards INNER join (
-	select data_cards._id, data_names.name
-	from data_cards inner join data_names on data_cards.name = data_names._id
-) as names on cards.card=names._id
-where list not in (
-	SELECT _id 
-	from lists 
-	WHERE category=2
-)
---limit 10
+SELECT lst.name from (
+	select names.name, sum(quantity) as quant
+	from (cards INNER join (
+		select data_cards._id, data_names.name
+		from data_cards inner join data_names on data_cards.name = data_names._id
+	 ) as names on cards.card=names._id) inner join lists on cards.list = lists._id
+	where category = 1
+	group by names.name
+) as lst left outer join (select names.name, sum(quantity) as quant
+	from (cards INNER join (
+		select data_cards._id, data_names.name
+		from data_cards inner join data_names on data_cards.name = data_names._id
+	 ) as names on cards.card=names._id) inner join lists on cards.list = lists._id
+	where category = 2
+	group by names.name
+) as dck on lst.name=dck.name
+where dck.quant IS NULL OR lst.quant > dck.quant
 """
 
 cursor.execute(q)
